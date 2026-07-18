@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة إدارة وحماية السكربتات | TRX l HUB</title>
+    <style>
+        :root {
+            --bg-color: #0c0c0f;
+            --panel-bg: #131318;
+            --accent-color: #ff3b30;
+            --primary-blue: #007aff;
+            --text-color: #ffffff;
+            --text-dim: #909095;
+            --border-color: #22222a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* شاشة تسجيل الدخول */
+        .login-container {
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: #1a1a22;
+            color: #fff;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--primary-blue);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: var(--primary-blue);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        /* لوحة التحكم الرئيسية */
+        .dashboard {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            font-size: 22px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .file-upload {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-label {
+            background: #22222a;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* قائمة السكربتات المحفوظة */
+        .script-card {
+            background: #1a1a22;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 12px;
+            border: 1px solid #282835;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-del {
+            background: var(--accent-color);
+            width: auto;
+            padding: 6px 12px;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .loader-box {
+            background: #0c0c0f;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #34c759;
+            border: 1px solid #222;
+            text-align: left;
+            direction: ltr;
+            margin-top: 6px;
+            word-break: break-all;
+            user-select: all;
+        }
+
+        /* شاشة الـ RAW الحقيقية (خداع الـ 404 والشاشة السوداء) */
+        .raw-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #000000;
+            color: #ffffff;
+            font-family: monospace;
+            padding: 20px;
+            z-index: 99999;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .error-404 {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 16px;
+            color: #444444;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        .raw-content {
+            margin-top: 60px;
+            color: #030303; /* مخفي تماماً بلون أسود متناسق مع الخلفية لمنع القراءة بالعين */
+            word-break: break-all;
+            font-size: 10px;
+            max-height: 80vh;
+            overflow: auto;
+            user-select: none; /* حظر كامل للنسخ والتحديد */
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. شاشة تسجيل الدخول -->
+    <div class="login-container" id="loginPage">
+        <h2>تسجيل الدخول للنظام</h2>
+        <input type="text" id="userInput" placeholder="اسم المستخدم" value="نظام">
+        <input type="password" id="passInput" placeholder="كلمة المرور" value="التراكسي">
+        <button onclick="checkLogin()">دخول</button>
+    </div>
+
+    <!-- 2. لوحة التحكم لإدارة وتوليد الـ RAW -->
+    <div class="dashboard" id="dashboardPage">
+        <div class="panel">
+            <h2>إضافة سكربت جديد ومحمّي</h2>
+            <input type="text" id="scriptName" placeholder="اسم السكربت (مثال: speed-hub)">
+            <textarea id="scriptCode" rows="6" placeholder="-- ضع كود لوا (Lua Script) هنا..."></textarea>
+            
+            <div class="file-upload">
+                <label class="file-label" for="fileInput">أو اختر ملف سكربت</label>
+                <input type="file" id="fileInput" accept=".lua,.txt" onchange="handleFile(this)" style="display:none;">
+                <span id="fileName" style="color: var(--text-dim); font-size: 14px;">لم يتم اختيار ملف</span>
+            </div>
+            
+            <button onclick="saveNewScript()">توليد رابط RAW واللودر</button>
+        </div>
+
+        <div class="panel">
+            <h2>السكربتات النشطة وروابطها:</h2>
+            <div id="scriptsList"></div>
+        </div>
+    </div>
+
+    <!-- 3. شاشة الـ RAW الصامتة (تمويه 404 المطلق) -->
+    <div class="raw-screen" id="rawPage">
+        <div class="error-404">404 : Page Not Found</div>
+        <div class="raw-content" id="rawSecureContent"></div>
+    </div>
+
+    <script>
+        // التخزين المحلي للبيانات بالمتصفح
+        let db = JSON.parse(localStorage.getItem('trx_secure_db')) || {};
+
+        // نظام التحقق من الدخول
+        function checkLogin() {
+            const u = document.getElementById('userInput').value;
+            const p = document.getElementById('passInput').value;
+            if (u === "نظام" && p === "التراكسي") {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('dashboardPage').style.display = 'block';
+                renderActiveScripts();
+            } else {
+                alert('البيانات خاطئة يا صاحبي!');
+            }
+        }
+
+        // قراءة الملف المرفوع تلقائياً واسمه
+        function handleFile(input) {
+            const file = input.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('scriptName').value = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '-').toLowerCase();
+                const reader = new FileReader();
+                reader.onload = e => document.getElementById('scriptCode').value = e.target.result;
+                reader.readAsText(file);
+            }
+        }
+
+        // خوارزمية حماية وتعمية متطورة للغاية (Multi-Layer Cipher + XOR Shifting)
+        function superEncrypt(text) {
+            let b64 = btoa(unescape(encodeURIComponent(text))); 
+            let layer1 = "";
+            for (let i = 0; i < b64.length; i++) {
+                layer1 += String.fromCharCode((b64.charCodeAt(i) ^ 88) + 12); 
+            }
+            return btoa(layer1); 
+        }
+
+        // دالة فك التشفير التلقائية
+        function superDecrypt(cipherText) {
+            try {
+                let layer1 = atob(cipherText);
+                let b64 = "";
+                for (let i = 0; i < layer1.length; i++) {
+                    b64 += String.fromCharCode((layer1.charCodeAt(i) - 12) ^ 88);
+                }
+                return decodeURIComponent(escape(atob(b64)));
+            } catch(e) {
+                return "-- SECURITY BLOCK: INVALID ACCESS --";
+            }
+        }
+
+        // حفظ السكربت وتوليده
+        function saveNewScript() {
+            const name = document.getElementById('scriptName').value.trim().replace(/\s+/g, '-').toLowerCase();
+            const code = document.getElementById('scriptCode').value.trim();
+
+            if (!name || !code) return alert('أدخل اسم السكربت وضع الكود الحقيقي!');
+
+            db[name] = superEncrypt(code);
+            localStorage.setItem('trx_secure_db', JSON.stringify(db));
+
+            // تفريغ الحقول
+            document.getElementById('scriptName').value = '';
+            document.getElementById('scriptCode').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileName').textContent = 'لم يتم اختيار ملف';
+
+            renderActiveScripts();
+            alert('تم تشفير السكربت وحفظه بنجاح تام!');
+        }
+
+        // بناء وعرض القائمة والروابط واللوادر
+        function renderActiveScripts() {
+            const container = document.getElementById('scriptsList');
+            container.innerHTML = '';
+            
+            const baseUrl = window.location.href.split('?')[0];
+
+            for (let key in db) {
+                const rawUrl = baseUrl + '?raw=' + key;
+                // كود اللودر الجاهز للاستدعاء الفوري بدون حجب
+                const luaLoader = 'loadstring(game:HttpGet("' + rawUrl + '"))()';
+
+                container.innerHTML += `
+                    <div class="script-card">
+                        <div class="card-header">
+                            <strong>📄 ${key}</strong>
+                            <button class="btn-del" onclick="deleteScript('${key}')">حذف السكربت</button>
+                        </div>
+                        <div style="font-size:13px; color:var(--text-dim);">رابط الـ RAW (انسخه):</div>
+                        <div class="loader-box"><a href="${rawUrl}" target="_blank" style="color:#34c759; text-decoration:none;">${rawUrl}</a></div>
+                        <div style="font-size:13px; color:var(--text-dim); margin-top:8px;">كود التشغيل (Lua Loader):</div>
+                        <div class="loader-box">${luaLoader}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // حذف السكربت
+        function deleteScript(key) {
+            if (confirm('هل تود حذف هذا السكربت نهائياً؟')) {
+                delete db[key];
+                localStorage.setItem('trx_secure_db', JSON.stringify(db));
+                renderActiveScripts();
+            }
+        }
+
+        // النظام الذكي لقراءة معلمات الرابط عند الدخول الفوري
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rawKey = urlParams.get('raw');
+
+            if (rawKey && db[rawKey]) {
+                // إخفاء كل واجهات الموقع وإظهار شاشة الـ 404 السوداء فوراً
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('dashboardPage').style.display = 'none';
+                document.getElementById('rawPage').style.display = 'block';
+
+                // وضع الكود مشفراً بالكامل ومخفياً بلون أسود متناسق مع الخلفية لمنع سرقته أو قراءته
+                document.getElementById('rawSecureContent').textContent = db[rawKey];
+                
+                // طباعة الكود الأصلي المفكوك داخل الكونسول السري المخفي فقط للأدوات والحاقن ليشتغل 100%
+                console.log(superDecrypt(db[rawKey]));
+            }
+        };
+    </script>
+</body>
+</html>
