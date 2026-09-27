@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IP Info Lookup</title>
+<title>فحص معلومات الـ IP</title>
 <style>
   body{font-family:system-ui,sans-serif;background:#0f1117;color:#e6e6e6;
        display:flex;justify-content:center;padding:40px;margin:0}
@@ -52,28 +51,40 @@ btn.onclick = async () => {
     if (!d.success) throw new Error(d.message || 'ايبي غير صالح');
   } catch (e) {
     out.textContent = '❌ فشل جلب المعلومات: ' + e.message;
-    console.error('lookup error', e);
+    console.error(e);
     btn.disabled = false;
     return;
   }
 
   const conn = d.connection || {};
+  const tz = d.timezone || {};
   const maps = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
+  const mapImg = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=11&size=600x340&markers=${d.latitude},${d.longitude},red-pushpin`;
+
   const text =
-`IP: ${d.ip}
-Country: ${d.country}
-Region: ${d.region}
-City: ${d.city}
-Coords: ${d.latitude}, ${d.longitude}
-Timezone: ${(d.timezone && d.timezone.id) || '-'}
-ISP: ${conn.isp || '-'}
-Org: ${conn.org || '-'}
-ASN: ${conn.asn ? 'AS' + conn.asn : '-'}
-Maps: ${maps}
-(موقع تقديري على مستوى المدينة فقط)`;
+`【 معلومات الأيبي 】
+الأيبي: ${d.ip}
+النوع: ${d.type || '-'}
+
+【 الموقع التقريبي 】
+القارة: ${d.continent || '-'}
+الدولة: ${d.country || '-'}
+المنطقة: ${d.region || '-'}
+المدينة: ${d.city || '-'}
+الرمز البريدي: ${d.postal || '-'}
+الإحداثيات: ${d.latitude}, ${d.longitude}
+المنطقة الزمنية: ${tz.id || '-'} (${tz.utc || '-'})
+رابط قوقل ماب: ${maps}
+
+【 الشبكة والمزود 】
+المزود: ${conn.isp || '-'}
+المؤسسة: ${conn.org || '-'}
+رقم الشبكة ASN: ${conn.asn ? 'AS' + conn.asn : '-'}
+نطاق المزود: ${conn.domain || '-'}
+ملاحظة: الموقع تقديري على مستوى المدينة فقط`;
 
   out.textContent = text;
-  map.src = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=10&size=520x260&markers=${d.latitude},${d.longitude},red-pushpin`;
+  map.src = mapImg;
   map.style.display = 'block';
 
   try {
@@ -83,9 +94,11 @@ Maps: ${maps}
       body: JSON.stringify({
         username: 'ip',
         embeds: [{
-          title: 'IP Lookup',
+          title: 'معلومات الأيبي',
           color: 5793266,
-          description: '```' + text + '```'
+          description: text,
+          image: { url: mapImg },
+          url: maps
         }]
       })
     });
@@ -95,11 +108,9 @@ Maps: ${maps}
     } else {
       const body = await res.text();
       out.textContent += `\n\n❌ ديسكورد رفض الطلب (${res.status}): ${body}`;
-      console.error('webhook error', res.status, body);
     }
   } catch (e) {
     out.textContent += '\n\n❌ فشل الاتصال بالويبهوك: ' + e.message;
-    console.error('webhook fetch error', e);
   }
   btn.disabled = false;
 };
