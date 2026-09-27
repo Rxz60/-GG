@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IP </title>
+<title>IP Info Lookup</title>
 <style>
   body{font-family:system-ui,sans-serif;background:#0f1117;color:#e6e6e6;
        display:flex;justify-content:center;padding:40px;margin:0}
@@ -18,7 +19,6 @@
   pre{margin-top:18px;background:#0f1117;padding:16px;border-radius:10px;
       white-space:pre-wrap;word-break:break-word;font-size:14px;min-height:20px}
   img{width:100%;margin-top:14px;border-radius:10px;display:none}
-  a{color:#8ab4ff}
 </style>
 </head>
 <body>
@@ -45,37 +45,39 @@ btn.onclick = async () => {
   btn.disabled = true;
   map.style.display = 'none';
 
+  let d;
   try {
-    const r = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,query`);
-    const d = await r.json();
+    const r = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    d = await r.json();
+    if (!d.success) throw new Error(d.message || 'ايبي غير صالح');
+  } catch (e) {
+    out.textContent = '❌ فشل جلب المعلومات: ' + e.message;
+    console.error('lookup error', e);
+    btn.disabled = false;
+    return;
+  }
 
-    if (d.status !== 'success') {
-      out.textContent = 'خطأ: ' + (d.message || 'ايبي غير صالح');
-      btn.disabled = false;
-      return;
-    }
-
-    const maps = `https://www.google.com/maps?q=${d.lat},${d.lon}`;
-    const text =
-`IP: ${d.query}
+  const conn = d.connection || {};
+  const maps = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
+  const text =
+`IP: ${d.ip}
 Country: ${d.country}
-Region: ${d.regionName}
+Region: ${d.region}
 City: ${d.city}
-Zip: ${d.zip || '-'}
-Coords: ${d.lat}, ${d.lon}
-Timezone: ${d.timezone}
-ISP: ${d.isp}
-Org: ${d.org}
-ASN: ${d.as}
+Coords: ${d.latitude}, ${d.longitude}
+Timezone: ${(d.timezone && d.timezone.id) || '-'}
+ISP: ${conn.isp || '-'}
+Org: ${conn.org || '-'}
+ASN: ${conn.asn ? 'AS' + conn.asn : '-'}
 Maps: ${maps}
 (موقع تقديري على مستوى المدينة فقط)`;
 
-    out.textContent = text;
+  out.textContent = text;
+  map.src = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=10&size=520x260&markers=${d.latitude},${d.longitude},red-pushpin`;
+  map.style.display = 'block';
 
-    map.src = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.lat},${d.lon}&zoom=10&size=520x260&markers=${d.lat},${d.lon},red-pushpin`;
-    map.style.display = 'block';
-
-    await fetch(WEBHOOK_URL, {
+  try {
+    const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -88,9 +90,16 @@ Maps: ${maps}
       })
     });
 
-    out.textContent += '\n\n✅ تم الإرسال للويبهوك.';
+    if (res.status === 204) {
+      out.textContent += '\n\n✅ تم الإرسال للويبهوك.';
+    } else {
+      const body = await res.text();
+      out.textContent += `\n\n❌ ديسكورد رفض الطلب (${res.status}): ${body}`;
+      console.error('webhook error', res.status, body);
+    }
   } catch (e) {
-    out.textContent = 'خطأ: ' + e.message;
+    out.textContent += '\n\n❌ فشل الاتصال بالويبهوك: ' + e.message;
+    console.error('webhook fetch error', e);
   }
   btn.disabled = false;
 };
